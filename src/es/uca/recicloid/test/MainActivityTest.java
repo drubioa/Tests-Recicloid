@@ -5,6 +5,7 @@ import android.test.ActivityInstrumentationTestCase2;
 
 public class MainActivityTest 
 	extends ActivityInstrumentationTestCase2<MainActivity>{
+	@SuppressWarnings("unused")
 	private MainActivity mMainActivityTest;
 	
 	public MainActivityTest(){
