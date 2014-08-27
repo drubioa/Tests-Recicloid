@@ -1,4 +1,4 @@
-package es.uca.recicloid.test;
+package es.recicloid.pruebas.funcionales;
 
 import android.content.res.Resources;
 import android.test.ActivityInstrumentationTestCase2;
@@ -6,8 +6,8 @@ import android.widget.Button;
 
 import com.robotium.solo.Solo;
 
+import es.recicloid.activities.servrecog.CondicionesUsoActivity;
 import es.uca.recicloid.R;
-import es.uca.recicloid.activities.CondicionesUsoActivity;
 
 public class TestCondicionesUseActivity 
 	extends ActivityInstrumentationTestCase2<CondicionesUsoActivity>{

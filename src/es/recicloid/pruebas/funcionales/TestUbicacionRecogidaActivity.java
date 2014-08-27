@@ -1,10 +1,10 @@
-package es.uca.recicloid.test;
+package es.recicloid.pruebas.funcionales;
 
 
 import com.robotium.solo.Solo;
 
+import es.recicloid.activities.servrecog.UbicacionRecogidaActivity;
 import es.uca.recicloid.R;
-import es.uca.recicloid.activities.UbicacionRecogidaActivity;
 import android.content.res.Resources;
 import android.test.ActivityInstrumentationTestCase2;
 
