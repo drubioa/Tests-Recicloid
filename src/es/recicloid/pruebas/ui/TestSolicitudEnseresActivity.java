@@ -1,8 +1,8 @@
-package es.recicloid.pruebas.funcionales;
+package es.recicloid.pruebas.ui;
 
 import com.robotium.solo.Solo;
 
-import es.recicloid.activities.servrecog.SolicitudEnseresActivity;
+import es.recicloid.SolicitudEnseres.SolicitudEnseresActivity;
 import android.content.res.Resources;
 import android.test.ActivityInstrumentationTestCase2;
 import android.widget.Button;
@@ -34,6 +34,7 @@ public class TestSolicitudEnseresActivity
 	
 	public void testDisableButtonToContinue() throws Exception {
 		Resources testRes = getResoucres();
+		solo.clickOnText("Aceptar");
 		Button btn_solicitarRecog  = solo.getButton(testRes.getString(R.string.title_solicitud));
 		assertTrue(btn_solicitarRecog.isEnabled() == false);
 	}
@@ -42,6 +43,7 @@ public class TestSolicitudEnseresActivity
 	public void testSelectAllCategories() throws Exception {
 		Resources testRes = getResoucres();
 		final String[] categories = testRes.getStringArray(R.array.categorias_enseresa);
+		solo.clickOnText("Aceptar");
 		solo.clickOnText(categories[0]);
 		solo.clickOnText(categories[0]);
 		for(int i = 1;i < categories.length;i++){
@@ -59,12 +61,16 @@ public class TestSolicitudEnseresActivity
 		try{
 			Resources testRes = getResoucres();
 			final String[] categories = testRes.getStringArray(R.array.categorias_enseresa);
+			solo.clickOnText("Aceptar");
 			solo.clickOnText(categories[0]);
 			solo.clickOnText(categories[0]);
 			solo.clickOnText(testRes.getString(R.string.item_bathtub));
 			solo.clickOnText(testRes.getString(R.string.item_bathtub));
+			solo.clickOnText(testRes.getString(R.string.dialog_more_funitures_add)); 
 			solo.clickOnText(testRes.getString(R.string.item_bathtub));
+			solo.clickOnText(testRes.getString(R.string.dialog_more_funitures_add)); 
 			solo.clickOnText(testRes.getString(R.string.item_bathtub));
+			solo.clickOnText(testRes.getString(R.string.dialog_more_funitures_add)); 
 			solo.searchText(testRes.getString(R.string.dialog_title_4items));
 			solo.searchText(testRes.getString(R.string.dialog_descr_4items));
 			solo.clickOnText(testRes.getString(R.string.dialog_ok));

@@ -1,8 +1,8 @@
-package es.recicloid.pruebas.funcionales;
+package es.recicloid.pruebas.ui;
 
 import com.robotium.solo.Solo;
 
-import es.recicloid.activities.MainActivity;
+import es.recicloid.main.MainActivity;
 import es.uca.recicloid.R;
 import android.content.res.Resources;
 import android.test.ActivityInstrumentationTestCase2;
