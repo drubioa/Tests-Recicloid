@@ -6,7 +6,9 @@ import java.util.ArrayList;
 import java.util.List;
 
 import org.apache.http.HttpException;
+import org.apache.http.client.ClientProtocolException;
 import org.joda.time.LocalDate;
+import org.json.JSONException;
 
 import android.location.Location;
 import android.test.AndroidTestCase;
@@ -15,18 +17,18 @@ import es.recicloid.models.CollectionRequest;
 import es.recicloid.models.Furniture;
 import es.recicloid.models.ProvisionalAppointment;
 import es.recicloid.models.User;
+import es.recicloid.utils.conections.ConectionToPostNewUser;
 import es.recicloid.utils.conections.ConectorToCollectionPointService;
-import es.recicloid.utils.conections.ConectorToCollectionPointServiceImp;
 import es.recicloid.utils.conections.ConectorToDailyAppointmentService;
 import es.recicloid.utils.conections.ConectorToDailyAppointmentServiceImp;
-import es.recicloid.utils.conections.ConectorToServices;
 import es.recicloid.utils.conections.ConectorToUserService;
 import es.recicloid.utils.conections.ConectorToUserServiceImp;
+import es.recicloid.utils.conections.InfoToFindCollectionPoint;
 
 public class TestConections extends AndroidTestCase{
 	final int MAX_FURNITURES_PER_DAY = 4;
 	final int MAX_FURNITURES_PER_USER = 12;
-	ConectorToServices conector;
+	
 
 	protected void setUp() throws Exception {
         super.setUp();
@@ -43,14 +45,17 @@ public class TestConections extends AndroidTestCase{
 	public void testConectToGetCollectionPoint(){
 		try{
 			ConectorToCollectionPointService conector = 
-					new ConectorToCollectionPointServiceImp(this.getContext());
+					new ConectorToCollectionPointService(this.getContext());
 			CollectionPoint realCollectionPoint = 
 					new CollectionPoint(-6.193095,36.536233);
 			Location valid_location = new Location("testlocation");
 			valid_location.setLatitude(36.536234);
 			valid_location.setLongitude(-6.193096);
-			CollectionPoint point = 
-					conector.getNearestCollectionPoint(valid_location, false);
+			InfoToFindCollectionPoint info
+				= new InfoToFindCollectionPoint(valid_location,false);
+			conector.execute(info);
+			assertNull(conector.exception);
+			CollectionPoint point = conector.get();
 			assertNotNull(point);
 			assertTrue(point.getLng()+"|"+point.getLat(),
 					point.getLng() == realCollectionPoint.getLng() 
@@ -68,13 +73,16 @@ public class TestConections extends AndroidTestCase{
 	public void testConectToGetInvalidCollectionPoint(){
 		try{
 			ConectorToCollectionPointService conector = 
-					new ConectorToCollectionPointServiceImp(this.getContext());
+					new ConectorToCollectionPointService(this.getContext());
 			Location valid_location = new Location("testlocation");
 			valid_location.setLatitude(0);
 			valid_location.setLongitude(0);
-			CollectionPoint point = 
-					conector.getNearestCollectionPoint(valid_location, false);
-			assertNotNull(point);
+			InfoToFindCollectionPoint info
+				= new InfoToFindCollectionPoint(valid_location,false);
+			conector.execute(info);
+			assertNull(conector.exception);
+			CollectionPoint point = conector.get();
+			assertNull(point);
 		}
 		catch(RuntimeException e){
 			if(e.toString().equals(
@@ -101,55 +109,6 @@ public class TestConections extends AndroidTestCase{
 		deleteUser(user);
 	}
 	
-	private void addUser(User user){
-		try {
-			ConectorToUserService conector = 
-					new ConectorToUserServiceImp(this.getContext());
-			conector.postNewUser(user.getName(), user.getPhone());
-		} catch (Exception e) {
-			fail(e.toString());
-		}	
-	}
-	
-	private void deleteUser(User user){
-		try {
-			ConectorToUserService conector = 
-					new ConectorToUserServiceImp(this.getContext());
-			conector.deleteUser(user);
-		} catch (Exception e) {
-			fail(e.toString());
-		}	
-	}
-	
-	public void testGet1ProvisionalAppointment(){
-		final String phone_number = "689301243";
-		final int N = 1;
-		final int urbanPointId = 1;
-		try {
-			getProvisionalAppointment(phone_number,N,urbanPointId);
-			deletePendingRequest(phone_number);
-		} catch (Exception e) {
-			e.printStackTrace();
-			fail();
-		}
-	}
-	
-	private List<ProvisionalAppointment> getProvisionalAppointment(String phone_number,
-		int num_furnitures, int point_id) throws Exception{
-		ConectorToDailyAppointmentService conector = 
-				new ConectorToDailyAppointmentServiceImp(this.getContext());
-		List<ProvisionalAppointment> appointments = 
-				conector.getProvisionalAppointments(phone_number, num_furnitures, point_id);
-		assertNotNull(appointments);
-		int totalFurnitures = 0;
-		AppointmentValidator.validAppointment(appointments);
-		for(ProvisionalAppointment a : appointments){
-			totalFurnitures += a.getNumFurnitures();	
-		}
-		assertTrue(totalFurnitures == num_furnitures);
-		return appointments;
-	}
-	
 	public void testGet2ProvisionalAppointment(){
 		final String phone_number = "689301243";
 		final int N = MAX_FURNITURES_PER_DAY + 1;
@@ -160,10 +119,10 @@ public class TestConections extends AndroidTestCase{
 			deletePendingRequest(phone_number);
 		} catch (Exception e) {
 			e.printStackTrace();
-			fail();
+			fail(e.toString());
 		}
 	}
-	
+
 	public void testGet3ProvisionalAppointment(){
 		final String phone_number = "689301243";
 		final int N = MAX_FURNITURES_PER_DAY * 2 + 1;
@@ -174,10 +133,10 @@ public class TestConections extends AndroidTestCase{
 			deletePendingRequest(phone_number);
 		} catch (Exception e) {
 			e.printStackTrace();
-			fail();
+			fail(e.toString());
 		}
 	}
-	
+
 	public void testGetMoreOf3ProvisionalAppointment(){
 		final String phone_number = "689301243";
 		final int N = MAX_FURNITURES_PER_DAY * 3 + 1;
@@ -187,15 +146,9 @@ public class TestConections extends AndroidTestCase{
 			fail("Not show error when did ilegal request.");
 		} catch (Exception e) {
 			assertTrue(e.toString().contains("error code : 500"));
-		}finally{
-			try {
-				deletePendingRequest(phone_number);
-			} catch (Exception e) {
-				e.printStackTrace();
-			}	
 		}
 	}
-	
+
 	public void testGet2ProvisionalAppointmentsOfSameRequest(){
 		final String phone_number = "689301243";
 		final int N = 1;
@@ -215,11 +168,11 @@ public class TestConections extends AndroidTestCase{
 			}	
 		}
 	}
-	
+
 	public void testGetAndConfirm1ProvisionalAppointment(){
 		final String name = "Diego";
-		final String phone_number = "698352111";
-		final User user = new User(name,phone_number);
+		final String phone = "698352111";
+		final User user = new User(name,phone);
 		final int urbanPointId = 1;
 		final int num_furnitures = 1;
 		try{
@@ -227,7 +180,7 @@ public class TestConections extends AndroidTestCase{
 			addUser(user);
 			// Get provisional Appointment.
 			List<ProvisionalAppointment> appointments  = getProvisionalAppointment(
-					phone_number,num_furnitures,urbanPointId);
+					phone,num_furnitures,urbanPointId);
 			validAppointments(appointments);
 			// Confirm Appointment.
 			for(ProvisionalAppointment a : appointments){
@@ -237,11 +190,12 @@ public class TestConections extends AndroidTestCase{
 				assertTrue(!furnitures.isEmpty());
 				confirmAppointment(a,furnitures);
 			}
+			checkValidConfirmedRequest(phone,1);
 		} catch (Exception e) {
 		fail(e.toString());
 		}finally{
 			try {
-				deletePendingRequest(phone_number);
+				deletePendingRequest(phone);
 			} catch (Exception e) {
 				fail(e.toString());
 			}
@@ -251,11 +205,11 @@ public class TestConections extends AndroidTestCase{
 		}
 		
 	}
-	
+
 	public void testGetAndConfirm2ProvisionalAppointment(){
 		final String name = "Diego";
-		final String phone_number = "698347111";
-		final User user = new User(name,phone_number);
+		final String phone = "698347111";
+		final User user = new User(name,phone);
 		final int urbanPointId = 1;
 		final int num_furnitures = MAX_FURNITURES_PER_DAY+1;
 		try{
@@ -263,7 +217,7 @@ public class TestConections extends AndroidTestCase{
 			addUser(user);
 			// Get provisional Appointment.
 			List<ProvisionalAppointment> appointments  = getProvisionalAppointment(
-					phone_number,num_furnitures,urbanPointId);
+					phone,num_furnitures,urbanPointId);
 			validAppointments(appointments);
 			// Confirm Appointment.
 			for(ProvisionalAppointment a : appointments){
@@ -273,11 +227,12 @@ public class TestConections extends AndroidTestCase{
 				assertTrue(!furnitures.isEmpty());
 				confirmAppointment(a,furnitures);
 			}
+			checkValidConfirmedRequest(phone,2);
 		} catch (Exception e) {
 		fail(e.toString());
 		}finally{
 			try {
-				deletePendingRequest(phone_number);
+				deletePendingRequest(phone);
 			} catch (Exception e) {
 				fail(e.toString());
 			}
@@ -287,11 +242,11 @@ public class TestConections extends AndroidTestCase{
 		}
 		
 	}
-	
+
 	public void testGetAndConfirm3ProvisionalAppointment(){
 		final String name = "Diego";
-		final String phone_number = "698347111";
-		final User user = new User(name,phone_number);
+		final String phone = "698347111";
+		final User user = new User(name,phone);
 		final int urbanPointId = 1;
 		final int num_furnitures = MAX_FURNITURES_PER_DAY*2+1;
 		try{
@@ -299,7 +254,7 @@ public class TestConections extends AndroidTestCase{
 			addUser(user);
 			// Get provisional Appointment.
 			List<ProvisionalAppointment> appointments  = getProvisionalAppointment(
-					phone_number,num_furnitures,urbanPointId);
+					phone,num_furnitures,urbanPointId);
 			validAppointments(appointments);
 			// Confirm Appointment.
 			for(ProvisionalAppointment a : appointments){
@@ -309,11 +264,12 @@ public class TestConections extends AndroidTestCase{
 				assertTrue(!furnitures.isEmpty());
 				confirmAppointment(a,furnitures);
 			}
+			checkValidConfirmedRequest(phone,3);
 		} catch (Exception e) {
 		fail(e.toString());
 		}finally{
 			try {
-				deletePendingRequest(phone_number);
+				deletePendingRequest(phone);
 			} catch (Exception e) {
 				fail(e.toString());
 			}
@@ -322,6 +278,97 @@ public class TestConections extends AndroidTestCase{
 			}
 		}
 		
+	}
+
+	/**
+	 * Se comprueba que al intentar obtener el numero de peticiones pendientes de un usuario que no ha confirmado
+	 * ninguna, esta es cero.
+	 */
+	public void testGetPendingOfUserNoGotPending(){
+		final String name = "Anonymous";
+		final String phone = "600010203";
+		final User user = new User(name,phone);
+		try{
+			addUser(user);
+			checkValidConfirmedRequest(phone,0);
+		} catch (Exception e){
+			if(!e.toString().contains("HTTP error code : 204")){
+				fail(e.toString());
+			}
+		}finally{
+			deleteUser(user);
+		}
+	}
+
+	public void testGetPendingOfInexistUser(){
+		final String phone = "95683010101";
+		try{
+			checkValidConfirmedRequest(phone,0);
+		}catch(Exception e){
+			if(!e.toString().contains("HTTP error code : 404")){
+					fail(e.toString());
+			}
+		}
+	}
+
+	public void testGet1ProvisionalAppointment(){
+		final String phone_number = "689301246";
+		final int N = 1;
+		final int urbanPointId = 1;
+		try {
+			getProvisionalAppointment(phone_number,N,urbanPointId);
+			deletePendingRequest(phone_number);
+		} catch (Exception e) {
+			fail(e.toString());
+		}
+	}
+
+	private void addUser(User user){
+		try {
+			ConectionToPostNewUser conector = 
+					new ConectionToPostNewUser(this.getContext());
+			conector.execute(user);
+			if(!conector.get()){
+				fail("No se creo el usuario ");
+			}
+		} catch (Exception e) {
+			fail(e.toString());
+		}	
+	}
+	
+	private void deleteUser(User user){
+		try {
+			ConectorToUserService conector = 
+					new ConectorToUserServiceImp(this.getContext());
+			conector.deleteUser(user);
+		} catch (Exception e) {
+			fail(e.toString());
+		}	
+	}
+	
+	private List<ProvisionalAppointment> getProvisionalAppointment(String phone_number,
+		int num_furnitures, int point_id) throws Exception{
+		ConectorToDailyAppointmentService conector = 
+				new ConectorToDailyAppointmentServiceImp(this.getContext());
+		List<ProvisionalAppointment> appointments = 
+				conector.getProvisionalAppointments(phone_number, num_furnitures, point_id);
+		assertNotNull(appointments);
+		int totalFurnitures = 0;
+		AppointmentValidator.validAppointment(appointments);
+		for(ProvisionalAppointment a : appointments){
+			totalFurnitures += a.getNumFurnitures();	
+		}
+		assertTrue(totalFurnitures == num_furnitures);
+		return appointments;
+	}
+	
+	private void checkValidConfirmedRequest(String phone,int numOfRequests) 
+			throws ClientProtocolException, IOException, JSONException{
+		ConectorToDailyAppointmentService conector =
+				new ConectorToDailyAppointmentServiceImp(getContext());
+		List<CollectionRequest> req = conector.getPendingRequest(phone);
+		// Se esperan al menos un numOfRequest dias.
+		assertTrue(req.size() >= numOfRequests);
 	}
 	
 	private void deletePendingRequest(String phone) 
@@ -383,4 +430,5 @@ public class TestConections extends AndroidTestCase{
 		}
 		return furnitures;
 	}
+
 }
