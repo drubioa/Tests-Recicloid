@@ -1,17 +1,12 @@
 package es.recicloid.pruebas.unit;
 
 import java.io.IOException;
-import java.net.URISyntaxException;
 import java.util.ArrayList;
 import java.util.List;
-
-import org.apache.http.HttpException;
-import org.apache.http.client.ClientProtocolException;
 import org.joda.time.LocalDate;
-import org.json.JSONException;
-
 import android.location.Location;
 import android.test.AndroidTestCase;
+import android.util.Log;
 import es.recicloid.models.CollectionPoint;
 import es.recicloid.models.CollectionRequest;
 import es.recicloid.models.Furniture;
@@ -19,11 +14,14 @@ import es.recicloid.models.ProvisionalAppointment;
 import es.recicloid.models.User;
 import es.recicloid.utils.conections.ConectionToPostNewUser;
 import es.recicloid.utils.conections.ConectorToCollectionPointService;
-import es.recicloid.utils.conections.ConectorToDailyAppointmentService;
-import es.recicloid.utils.conections.ConectorToDailyAppointmentServiceImp;
+import es.recicloid.utils.conections.ConectorToConfirmAppointment;
+import es.recicloid.utils.conections.ConectorToDeletePendingRequests;
+import es.recicloid.utils.conections.ConectorToGetCollectionReq;
+import es.recicloid.utils.conections.ConectorToGetProvisAppointment;
 import es.recicloid.utils.conections.ConectorToUserService;
 import es.recicloid.utils.conections.ConectorToUserServiceImp;
 import es.recicloid.utils.conections.InfoToFindCollectionPoint;
+import es.recicloid.utils.conections.InfoToGetProvAppointments;
 
 public class TestConections extends AndroidTestCase{
 	final int MAX_FURNITURES_PER_DAY = 4;
@@ -348,10 +346,15 @@ public class TestConections extends AndroidTestCase{
 	
 	private List<ProvisionalAppointment> getProvisionalAppointment(String phone_number,
 		int num_furnitures, int point_id) throws Exception{
-		ConectorToDailyAppointmentService conector = 
-				new ConectorToDailyAppointmentServiceImp(this.getContext());
-		List<ProvisionalAppointment> appointments = 
-				conector.getProvisionalAppointments(phone_number, num_furnitures, point_id);
+		ConectorToGetProvisAppointment conector =
+				new ConectorToGetProvisAppointment(getContext());
+		InfoToGetProvAppointments info = new 
+				InfoToGetProvAppointments(phone_number,num_furnitures,point_id);
+		conector.execute(info);
+		List<ProvisionalAppointment> appointments = conector.get();
+		if(conector.exception != null){
+			throw conector.exception;
+		}
 		assertNotNull(appointments);
 		int totalFurnitures = 0;
 		AppointmentValidator.validAppointment(appointments);
@@ -363,19 +366,29 @@ public class TestConections extends AndroidTestCase{
 	}
 	
 	private void checkValidConfirmedRequest(String phone,int numOfRequests) 
-			throws ClientProtocolException, IOException, JSONException{
-		ConectorToDailyAppointmentService conector =
-				new ConectorToDailyAppointmentServiceImp(getContext());
-		List<CollectionRequest> req = conector.getPendingRequest(phone);
+			throws Exception{
+		ConectorToGetCollectionReq conector =
+				new ConectorToGetCollectionReq(getContext());
+		conector.execute(phone);
+		List<CollectionRequest> req = conector.get();
+		if(conector.exception != null){
+			throw conector.exception;
+		}
 		// Se esperan al menos un numOfRequest dias.
 		assertTrue(req.size() >= numOfRequests);
 	}
 	
-	private void deletePendingRequest(String phone) 
-			throws IOException, URISyntaxException, HttpException{
-		ConectorToDailyAppointmentService conector = 
-				new ConectorToDailyAppointmentServiceImp(this.getContext());
-		conector.deletePendingAppointments(phone);
+	private void deletePendingRequest(String phone) throws Exception{
+		ConectorToDeletePendingRequests conector = 
+				new ConectorToDeletePendingRequests(this.getContext());
+		conector.execute(phone);
+		if(!conector.get()){
+			Log.e("deletePendingRequest","Cannot delete pending requests");
+			if(conector.exception != null){
+				// Si hay una exception la lanza
+				throw conector.exception;
+			}
+		}
 	}
 	
 	private void confirmAppointment(ProvisionalAppointment provisionalAppointment,
@@ -384,8 +397,8 @@ public class TestConections extends AndroidTestCase{
 			throw new IllegalArgumentException("no have furnitures.");
 		}
 
-		ConectorToDailyAppointmentService conector = 
-				new ConectorToDailyAppointmentServiceImp(this.getContext());
+		ConectorToConfirmAppointment conector = 
+				new ConectorToConfirmAppointment(this.getContext());
 		CollectionRequest req = null;
 		try {
 			req = new CollectionRequest(provisionalAppointment,furnitures);
@@ -395,9 +408,15 @@ public class TestConections extends AndroidTestCase{
 			fail(e.toString());
 		}
 		try {
-			conector.confirmAppointment(req);
+			conector.execute(req);
+			if(!conector.get()){
+				Log.e("ConectorToConfirmAppointment","Cannot confirm appointment");
+				if(conector.exception != null){
+					throw conector.exception;
+				}
+			}
 		} catch (Exception e) {
-			e.printStackTrace();
+			Log.e("confirmAppointment",e.toString());
 			fail(e.toString());
 		}
 	}
