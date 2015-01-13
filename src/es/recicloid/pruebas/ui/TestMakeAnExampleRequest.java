@@ -14,7 +14,6 @@ import es.uca.recicloid.R;
 public class TestMakeAnExampleRequest 
 extends ActivityInstrumentationTestCase2<MainActivity>{
 	private Solo solo;
-	private User user = new User("Anonimo","600000015");
 	
 	public TestMakeAnExampleRequest() {
 		super(MainActivity.class);
@@ -23,7 +22,6 @@ extends ActivityInstrumentationTestCase2<MainActivity>{
 	@Override
     protected void setUp() throws Exception {
 		super.setUp();
-		deleteUser(user);
         solo = new Solo(getInstrumentation(), getActivity());
     }
 	
@@ -32,7 +30,28 @@ extends ActivityInstrumentationTestCase2<MainActivity>{
 		return myActivity.getResources();	
 	}
 	
-	public void testMake1ExampleUrbanRequest(){
+	public void testMake1ExampleUrbanRequestAndDeleteIt() throws InterruptedException{
+		User user = new User("Anonimo","622110000");
+		try{
+			makeExampleRequest(user);
+			deleteExampleRequest(user);
+			checkRequestDeleted(user.getPhone());
+		}finally{
+			 deleteUser(user);
+		}
+	}
+	
+	private boolean checkRequestDeleted(String phone){
+		Resources testRes = getResoucres();
+		solo.clickOnText(testRes.getString(R.string.title_historial));
+		EditText editTextName = solo.getEditText(0);
+		assertNotNull(editTextName);
+		solo.enterText(editTextName,phone);
+		solo.clickOnText(testRes.getString(R.string.accept));
+		return solo.getString(R.string.not_exist_prev_req) != null;
+	}
+	
+	private void makeExampleRequest(User user){
 		Resources testRes = getResoucres();
 		solo.clickOnText(testRes.getString(R.string.title_solicitud));
 		solo.clickOnText("Aceptar");
@@ -46,6 +65,18 @@ extends ActivityInstrumentationTestCase2<MainActivity>{
 		solo.clickOnCheckBox(0);
 		solo.clickOnButton(testRes.getString(R.string.title_solicitud));
 		solo.clickOnButton(testRes.getString(R.string.cofirmation));
+		solo.clickOnButton(testRes.getString(R.string.back_main_menu));		
+	}
+	
+	private void deleteExampleRequest(User user){
+		Resources testRes = getResoucres();
+		solo.clickOnText(testRes.getString(R.string.title_historial));
+		EditText editTextName = solo.getEditText(0);
+		assertNotNull(editTextName);
+		solo.enterText(editTextName, user.getPhone());
+		solo.clickOnText(testRes.getString(R.string.accept));
+		solo.clickOnText(testRes.getString(R.string.cancel_requests));
+		solo.clickOnText(testRes.getString(R.string.dialog_ok));
 	}
 	
 	private void insertUserAndPhone(String userName,String phoneNumber){
@@ -59,7 +90,6 @@ extends ActivityInstrumentationTestCase2<MainActivity>{
 
 	@Override
 	protected void tearDown() throws Exception {
-	    deleteUser(user);
 	    solo.finishOpenedActivities();
 	}
 	

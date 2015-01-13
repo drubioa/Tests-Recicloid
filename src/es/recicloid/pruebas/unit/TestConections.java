@@ -101,14 +101,14 @@ public class TestConections extends AndroidTestCase{
 	 */
 	public void testAddAndDeleteUser(){
 		final String name = "Diego";
-		final String phone_number = "601010101";
+		final String phone_number = "600000001";
 		final User user = new User(name,phone_number);
 		addUser(user);
 		deleteUser(user);
 	}
 	
 	public void testGet2ProvisionalAppointment(){
-		final String phone_number = "689301243";
+		final String phone_number = "600000002";
 		final int N = MAX_FURNITURES_PER_DAY + 1;
 		final int urbanPointId = 1;
 		try {
@@ -122,7 +122,7 @@ public class TestConections extends AndroidTestCase{
 	}
 
 	public void testGet3ProvisionalAppointment(){
-		final String phone_number = "689301243";
+		final String phone_number = "600000003";
 		final int N = MAX_FURNITURES_PER_DAY * 2 + 1;
 		final int urbanPointId = 1;
 		try {
@@ -136,7 +136,7 @@ public class TestConections extends AndroidTestCase{
 	}
 
 	public void testGetMoreOf3ProvisionalAppointment(){
-		final String phone_number = "689301243";
+		final String phone_number = "600000004";
 		final int N = MAX_FURNITURES_PER_DAY * 3 + 1;
 		final int urbanPointId = 1;
 		try {
@@ -148,7 +148,7 @@ public class TestConections extends AndroidTestCase{
 	}
 
 	public void testGet2ProvisionalAppointmentsOfSameRequest(){
-		final String phone_number = "689301243";
+		final String phone_number = "600000005";
 		final int N = 1;
 		final int urbanPointId = 1;
 		try {
@@ -169,113 +169,77 @@ public class TestConections extends AndroidTestCase{
 
 	public void testGetAndConfirm1ProvisionalAppointment(){
 		final String name = "Diego";
-		final String phone = "698352111";
+		final String phone = "610000006";
 		final User user = new User(name,phone);
 		final int urbanPointId = 1;
 		final int num_furnitures = 1;
-		try{
-			// First Add User.
-			addUser(user);
-			// Get provisional Appointment.
-			List<ProvisionalAppointment> appointments  = getProvisionalAppointment(
-					phone,num_furnitures,urbanPointId);
-			validAppointments(appointments);
-			// Confirm Appointment.
-			for(ProvisionalAppointment a : appointments){
-				assertTrue(a.getNumFurnitures() > 0);
-				List<Furniture> furnitures = 
-						generateExampleFurnituresList(a.getNumFurnitures());
-				assertTrue(!furnitures.isEmpty());
-				confirmAppointment(a,furnitures);
-			}
-			checkValidConfirmedRequest(phone,1);
-		} catch (Exception e) {
-		fail(e.toString());
-		}finally{
-			try {
-				deletePendingRequest(phone);
-			} catch (Exception e) {
-				fail(e.toString());
-			}
-			finally{
-				deleteUser(user);
-			}
-		}
-		
+		checkGetAndConfirm(user,urbanPointId,num_furnitures);
 	}
 
 	public void testGetAndConfirm2ProvisionalAppointment(){
 		final String name = "Diego";
-		final String phone = "698347111";
+		final String phone = "600000007";
 		final User user = new User(name,phone);
 		final int urbanPointId = 1;
 		final int num_furnitures = MAX_FURNITURES_PER_DAY+1;
-		try{
-			// First Add User.
-			addUser(user);
-			// Get provisional Appointment.
-			List<ProvisionalAppointment> appointments  = getProvisionalAppointment(
-					phone,num_furnitures,urbanPointId);
-			validAppointments(appointments);
-			// Confirm Appointment.
-			for(ProvisionalAppointment a : appointments){
-				assertTrue(a.getNumFurnitures() > 0);
-				List<Furniture> furnitures = 
-						generateExampleFurnituresList(a.getNumFurnitures());
-				assertTrue(!furnitures.isEmpty());
-				confirmAppointment(a,furnitures);
-			}
-			checkValidConfirmedRequest(phone,2);
-		} catch (Exception e) {
-		fail(e.toString());
-		}finally{
-			try {
-				deletePendingRequest(phone);
-			} catch (Exception e) {
-				fail(e.toString());
-			}
-			finally{
-				deleteUser(user);
-			}
-		}
-		
+		checkGetAndConfirm(user,urbanPointId,num_furnitures);
 	}
 
 	public void testGetAndConfirm3ProvisionalAppointment(){
 		final String name = "Diego";
-		final String phone = "698347111";
+		final String phone = "600000008";
 		final User user = new User(name,phone);
 		final int urbanPointId = 1;
 		final int num_furnitures = MAX_FURNITURES_PER_DAY*2+1;
+		checkGetAndConfirm(user,urbanPointId,num_furnitures);
+	}
+
+	private void checkGetAndConfirm(User user,final int urbanPointId,int num_furnitures){
 		try{
 			// First Add User.
 			addUser(user);
+			
+			// Checks user no have previous requests.
+			ConectorToGetCollectionReq conect = 
+					new ConectorToGetCollectionReq(getContext());
+			conect.execute(user.getPhone());
+			assertNull(conect.get());
+			
 			// Get provisional Appointment.
 			List<ProvisionalAppointment> appointments  = getProvisionalAppointment(
-					phone,num_furnitures,urbanPointId);
+					user.getPhone(),num_furnitures,urbanPointId);
+			assertNotNull(appointments);
 			validAppointments(appointments);
 			// Confirm Appointment.
 			for(ProvisionalAppointment a : appointments){
 				assertTrue(a.getNumFurnitures() > 0);
 				List<Furniture> furnitures = 
 						generateExampleFurnituresList(a.getNumFurnitures());
+				assertNotNull(furnitures);
 				assertTrue(!furnitures.isEmpty());
 				confirmAppointment(a,furnitures);
 			}
-			checkValidConfirmedRequest(phone,3);
+			checkValidConfirmedRequest(user.getPhone(),1);
+			
+			// Checks user have previous requests.
+			conect = 
+					new ConectorToGetCollectionReq(getContext());
+			conect.execute(user.getPhone());
+			assertNotNull(conect.get());
+			assertFalse(conect.get().isEmpty());
+			
 		} catch (Exception e) {
-		fail(e.toString());
+			fail(e.toString());
 		}finally{
 			try {
-				deletePendingRequest(phone);
+				deletePendingRequest(user.getPhone());
 			} catch (Exception e) {
 				fail(e.toString());
 			}
 			finally{
 				deleteUser(user);
 			}
-		}
-		
+		}	
 	}
 
 	/**
@@ -284,7 +248,7 @@ public class TestConections extends AndroidTestCase{
 	 */
 	public void testGetPendingOfUserNoGotPending(){
 		final String name = "Anonymous";
-		final String phone = "600010203";
+		final String phone = "600000009";
 		final User user = new User(name,phone);
 		try{
 			addUser(user);
@@ -310,7 +274,7 @@ public class TestConections extends AndroidTestCase{
 	}
 
 	public void testGet1ProvisionalAppointment(){
-		final String phone_number = "689301246";
+		final String phone_number = "600000010";
 		final int N = 1;
 		final int urbanPointId = 1;
 		try {
@@ -327,7 +291,10 @@ public class TestConections extends AndroidTestCase{
 					new ConectionToPostNewUser(this.getContext());
 			conector.execute(user);
 			if(!conector.get()){
-				fail("No se creo el usuario ");
+				if(conector.exception != null){
+					Log.e("addUser","No se creo el usuario");
+					throw  conector.exception;
+				}
 			}
 		} catch (Exception e) {
 			fail(e.toString());
@@ -343,7 +310,15 @@ public class TestConections extends AndroidTestCase{
 			fail(e.toString());
 		}	
 	}
-	
+
+	/**
+	 * 
+	 * @param phone_number
+	 * @param num_furnitures
+	 * @param point_id
+	 * @return request provisional appointments to confirm
+	 * @throws Exception
+	 */
 	private List<ProvisionalAppointment> getProvisionalAppointment(String phone_number,
 		int num_furnitures, int point_id) throws Exception{
 		ConectorToGetProvisAppointment conector =
@@ -353,6 +328,8 @@ public class TestConections extends AndroidTestCase{
 		conector.execute(info);
 		List<ProvisionalAppointment> appointments = conector.get();
 		if(conector.exception != null){
+			Log.e("getProvisionalAppointment","Se produjo un error al establecer " +
+					"la conexion para obtener solicitudes provisionales.");
 			throw conector.exception;
 		}
 		assertNotNull(appointments);
@@ -402,18 +379,21 @@ public class TestConections extends AndroidTestCase{
 		CollectionRequest req = null;
 		try {
 			req = new CollectionRequest(provisionalAppointment,furnitures);
-			assertTrue(req.checkCorrectRequest());
+			assertTrue(req.checkCorrectRequest());;
 		} catch (Exception e) {
-			e.printStackTrace();
 			fail(e.toString());
 		}
 		try {
 			conector.execute(req);
+			Log.i("ConectorToConfirmAppointment","Conecting to confirm");
 			if(!conector.get()){
 				Log.e("ConectorToConfirmAppointment","Cannot confirm appointment");
 				if(conector.exception != null){
 					throw conector.exception;
 				}
+			}else{
+				Log.i("ConectorToConfirmAppointment","Appointment "+provisionalAppointment.getFch_collection().toString()
+						+" confirmed.");
 			}
 		} catch (Exception e) {
 			Log.e("confirmAppointment",e.toString());
